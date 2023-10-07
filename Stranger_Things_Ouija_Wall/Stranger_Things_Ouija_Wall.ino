@@ -49,6 +49,7 @@ RE1CLK  24            12
 #endif
 String ST[6] = {"/KateBush.mp3", "/NeverEndingStory.mp3", 
   "/Journey.mp3", "/MoP.mp3", "/theClash.mp3", "/theme.mp3"};
+String AN[2] = {"/JoyceRun.mp3", "/JoyceCupboard.mp3"};  
 // ----- Rotary Encoder definitions ------
 #if defined (encoder1)
   const uint8_t RE1_CLK = 24;                           // Rotary Encoder's CLK pin, each click in either direction, output cycles HIGH then LOW
@@ -121,6 +122,9 @@ uint8_t prevRandST = stNum + 1;                         // Placeholder for prev 
 uint8_t prev2RandST = stNum + 2;                        // Placeholder for prev randST to reduce repeats
 uint8_t prev3RandST = stNum + 3;                        // Placeholder for prev randST to reduce repeats
 uint8_t randST;                                         // Random Number for selecting Soundtracks randomly
+const uint8_t anNum = 2;                                // Range of numbers for randAn
+uint8_t prevRandAn = anNum + 1;                         // Placeholder for prev randAn to reduce repeats
+uint8_t randAn;                                         // Random Number for selecting Animations randomly
 uint8_t iTimer = 10;                                    // Inactivity timer setting, idle time to wait until next event 
 uint8_t inactiveTimer;                                  // Inactivity Timer
 const int hueFade = 0;
@@ -130,6 +134,7 @@ const int hbBeatBright = 255;
 uint8_t vuBright = 127;                                 // Brightness of VU Meter lights
 uint8_t sat = 255;                                      // Saturation, possible range 0-255
 uint8_t bright = 255;                                   // Brightness, possible range 0-255
+uint8_t ballBrightMin = 30;
 unsigned long now;                                      // Timer variable
 bool dspActive = false;                                 // Display Active, tells rest of script whether somethings running
 String cmd;                                             // Command String, saves data coming in from Serial
@@ -149,18 +154,19 @@ void millisDelay(unsigned long d) {
 void vuDisplay() {
   int volDispVal = 0;
   switch (max9744Vol) {
-    case 0 ... 15: volDispVal = 0; Serial.print("volDispVal = "); Serial.println(volDispVal); break;
-    case 16 ... 19: volDispVal = 1; Serial.print("volDispVal = "); Serial.println(volDispVal); break;
-    case 20 ... 21: volDispVal = 2; Serial.print("volDispVal = "); Serial.println(volDispVal); break;
-    case 22 ... 23: volDispVal = 3; Serial.print("volDispVal = "); Serial.println(volDispVal); break;
-    case 24 ... 25: volDispVal = 4; Serial.print("volDispVal = "); Serial.println(volDispVal); break;
-    case 26 ... 27: volDispVal = 5; Serial.print("volDispVal = "); Serial.println(volDispVal); break;
-    case 28 ... 29: volDispVal = 6; Serial.print("volDispVal = "); Serial.println(volDispVal); break;
-    case 30 ... 31: volDispVal = 7; Serial.print("volDispVal = "); Serial.println(volDispVal); break;
-    case 32 ... 33: volDispVal = 8; Serial.print("volDispVal = "); Serial.println(volDispVal); break;
-    case 34 ... 35: volDispVal = 9; Serial.print("volDispVal = "); Serial.println(volDispVal); break;
-    case 36 ... 64: volDispVal = 10; Serial.print("volDispVal = "); Serial.println(volDispVal); break;
+    case 0 ... 15: volDispVal = 0; break;
+    case 16 ... 19: volDispVal = 1; break;
+    case 20 ... 21: volDispVal = 2; break;
+    case 22 ... 23: volDispVal = 3; break;
+    case 24 ... 25: volDispVal = 4; break;
+    case 26 ... 27: volDispVal = 5; break;
+    case 28 ... 29: volDispVal = 6; break;
+    case 30 ... 31: volDispVal = 7; break;
+    case 32 ... 33: volDispVal = 8; break;
+    case 34 ... 35: volDispVal = 9; break;
+    case 36 ... 64: volDispVal = 10; break;
   }
+  Serial.print("volDispVal = "); Serial.println(volDispVal);
   for (int v = 0; v <= 10; v++) {
     if (v <= volDispVal) {
       vuLEDs[disp2leds[v].ledNum] = CHSV(0, 255, vuBright);
@@ -206,14 +212,14 @@ void readEncoder() { //https://lastminuteengineers.com/rotary-encoder-arduino-tu
       if (digitalRead(RE1_DT) != RE1_stateCLK) {  // If DT state is different than CLK, then encoder is rotating CCW
         if (max9744Vol < 63) {
           lastButtonPress = millis();
-          max9744Vol++; //;}; 
+          max9744Vol++;
           setVolume(max9744Vol); 
           vuDisplay();
           lastButtonPress = millis();
         }
       } else {  // Encoder is rotating CW
         if (max9744Vol > 0) {
-          max9744Vol--; //;}; 
+          max9744Vol--;
           setVolume(max9744Vol); 
           vuDisplay();
           lastButtonPress = millis();
@@ -234,11 +240,7 @@ void fadeOut(int fTime) {
       for ( int i=0; i < (alphabetNumLEDs); i++) { alphabetLEDs[i] = CHSV(alphabetLightNumColor[i], sat, b); }
     #endif
     FastLED.show();
-    #if defined (nonBlockingDisplay)
-      millisDelay(div);
-    #else
-      delay(div);
-    #endif
+    delay(div);
   }
 }
 
@@ -252,11 +254,7 @@ void fadeIn(int fTime) {
       for ( int i=0; i < (alphabetNumLEDs); i++) { alphabetLEDs[i] = CHSV(alphabetLightNumColor[i], sat, b); }
     #endif
     FastLED.show();
-    #if defined (nonBlockingDisplay)
-      millisDelay(div);
-    #else
-      delay(div);
-    #endif
+    delay(div);
   }
 }
 
@@ -333,6 +331,47 @@ void fadeToRed() {
     #endif
     FastLED.show();
     delay(10);
+  }
+}
+
+
+void ballFadeIn(int fTime) {
+  int div = (fTime/ bright);
+  for ( int b=ballBrightMin; b <= bright; b+=5) {
+    #if defined (ceilingEnabled)
+      for ( int i=(ceilingNumLEDs-50); i < (ceilingNumLEDs); i++) { ceilingLEDs[i] = CHSV(ceilingLightNumColor[i], 0, b); }
+    #else
+      for ( int i=0; i < (alphabetNumLEDs); i++) { alphabetLEDs[i] = CHSV(alphabetLightNumColor[i], 0, b); }
+    #endif
+    FastLED.show();
+    delay(div);
+  }
+}
+
+
+void ballDim(int fTime) {
+  int div = fTime / bright;
+  for ( int b=bright; b >= ballBrightMin; b-=5) {
+    #if defined (ceilingEnabled)
+      for ( int i=(ceilingNumLEDs-50); i < (ceilingNumLEDs); i++) { ceilingLEDs[i] = CHSV(40, 0, b); }
+    #else
+      for ( int i=0; i < (alphabetNumLEDs); i++) { alphabetLEDs[i] = CHSV(40, 0, b); }
+    #endif
+    FastLED.show();
+    delay(div);
+  }
+}
+
+
+void ballOff() {
+  for ( int b=ballBrightMin; b >= 0; b--) {
+    #if defined (ceilingEnabled)
+      for ( int i=(ceilingNumLEDs-50); i < (ceilingNumLEDs); i++) { ceilingLEDs[i] = CHSV(40, 0, b); }
+    #else
+      for ( int i=0; i < (alphabetNumLEDs); i++) { alphabetLEDs[i] = CHSV(40, 0, b); }
+    #endif
+    FastLED.show();
+    delay(20);
   }
 }
 
@@ -445,7 +484,7 @@ void creep(int startLED, int endLED) {
         alphabetLEDs[i] = CHSV(alphabetLightNumColor[i], sat, bright);
       #endif
       FastLED.show();
-      delay(250);
+      delay(200);
     }
     #if defined (ceilingEnabled)
       for (int i=startLED; i < endLED; i++) {ceilingLEDs[i] = CHSV(ceilingLightNumColor[i], sat, 0);}; 
@@ -461,7 +500,7 @@ void creep(int startLED, int endLED) {
         alphabetLEDs[i] = CHSV(alphabetLightNumColor[i], sat, bright);
       #endif
       FastLED.show();
-      delay(250);
+      delay(200);
     }
     #if defined (ceilingEnabled)
       for (int i=startLED; i > endLED; i--) {ceilingLEDs[i] = CHSV(ceilingLightNumColor[i], sat, 0);}; 
@@ -475,10 +514,6 @@ void creep(int startLED, int endLED) {
 
 void interfaces() {
   //if ( dspActive == false ) {
-  /*if (millis() >= (vuTimeDelay + 3000)) {
-    for (int v = 0; v <= 10; v++) {vuLEDs[disp2leds[v].ledNum] = CHSV(0, 255, 0);}
-    FastLED.show();
-  }*/
   if(Serial.available()) {
     String cmd = Serial.readStringUntil('\n');
     dspActive = true;
@@ -629,6 +664,49 @@ void predefined_msgs() {
 }
 
 #if defined (vs1053Enabled)
+void joyceCupboard() {
+  unsigned long clipStart = 0;
+  #if defined (verbose) 
+    Serial.println("joyceCupboard");
+  #endif
+  fadeOut(1000);
+  #if defined (fake_vs1053Enabled)
+    Serial.println("Fake playing Joyce.mp3");
+  #else
+    musicPlayer.startPlayingFile("/JoyceCupboard.mp3");
+  #endif
+  clipStart = millis();
+  Serial.print("clipStart: "); Serial.println(clipStart);
+  creep((ceilingNumLEDs-100), (ceilingNumLEDs-50));
+  creep((ceilingNumLEDs-100), (ceilingNumLEDs-50));
+  Serial.print("millis After 1st creep:"); Serial.println(millis());
+  while (millis() < (clipStart + 24445)) { }
+  ballFadeIn(20);
+  while (millis() < (clipStart + 29383)) { }
+  ballDim(20);
+  while (millis() < (clipStart + 38346)) { }
+  ballFadeIn(20);
+  while (millis() < (clipStart + 40884)) { }
+  ballDim(20);
+  while (millis() < (clipStart + 51708)) { }
+  ballFadeIn(20);
+  while (millis() < (clipStart + 56337)) { }
+  ballDim(20);
+  while (millis() < (clipStart + 61749)) { }
+  ballFadeIn(2);
+  while (millis() < (clipStart + 62742)) { }
+  ballDim(2);
+  while (millis() < (clipStart + 63231)) { }
+  ballFadeIn(2);
+  while (millis() < (clipStart + 64301)) { }
+  ballDim(2);
+  while (millis() < (clipStart + 94301)) { }
+  ballOff();
+  while (!musicPlayer.stopped()) { }
+  fadeIn(1000);
+}
+
+
 void joyceRun() {
   #if defined (verbose) 
     Serial.println("joyceRun");
@@ -639,9 +717,6 @@ void joyceRun() {
   #else
     musicPlayer.startPlayingFile("/Joyce.mp3");
   #endif
-  //now = millis();
-  //creep();
-  //int d=11268; while(millis() < now + d) { now += now + d; };
   delay(11268);
   dspLetter('R');delay(3197); dspLetter('I');delay(897); dspLetter('G');delay(558); dspLetter('H'); dspLetter('T');delay(401);
   dspLetter('H'); delay(256); dspLetter('E'); dspLetter('R'); delay(338); dspLetter('E'); delay(12926);
@@ -724,6 +799,50 @@ void theme() {
 }
 
 
+void animations() {
+  #if defined (verbose) 
+    Serial.println("Animations");
+  #endif
+  #if defined (debug)
+    Serial.print("randAn: "); 
+  #endif
+  for (int n = 0; n < random((anNum*2),(anNum*anNum)); n++) { 
+    randAn = random(0,anNum);
+    #if defined (debug)
+      Serial.print(randAn); Serial.print(" ");
+    #endif
+  }
+  #if defined (debug)
+    Serial.println("");
+    Serial.print("prevrandAn: "); Serial.print(prevrandAn);
+    Serial.print(" randAn: "); Serial.println(randAn);
+  #endif
+  if (randAn == prevRandAn) {
+    while (randAn == prevRandAn) { 
+      randAn = random(0,anNum); 
+      #if defined (debug)
+        Serial.print("prevrandAn: "); Serial.print(prevrandAn);
+        Serial.print(" randAn: "); Serial.println(randAn);
+      #endif
+    } 
+  }
+  #if defined (fake_vs1053Enabled)
+    Serial.print("Fake ");
+  #endif
+  #if defined (verbose) 
+    Serial.print("Playing "); Serial.println(AN[randAn]); 
+  #endif
+  #if ! defined (fake_vs1053Enabled)
+    if ( randAn == 0 ) { joyceRun(); };
+    if ( randAn == 1 ) { joyceCupboard(); };
+  #endif
+  prevRandAn = randAn;
+  #if defined (verbose) 
+    Serial.print(AN[randAn]); Serial.println(" finished");
+  #endif
+}
+
+
 void soundTrack() {
   #if defined (verbose) 
     Serial.println("soundTrack");
@@ -770,7 +889,6 @@ void soundTrack() {
     if ( randST == 5 ) { theme(); };
   #endif
   prev3RandST = prev2RandST; prev2RandST = prevRandST; prevRandST = randST;
-  //fadeOut(1000);
   #if defined (fake_vs1053Enabled)
     Serial.println("Waiting for fake playback");
   #else
@@ -779,7 +897,6 @@ void soundTrack() {
   #if defined (verbose) 
     Serial.print(ST[randST]); Serial.println(" finished");
   #endif
-  //fadeIn(1000);
 }
 
 
@@ -802,6 +919,7 @@ void printDirectory(File dir, int numTabs) {    // File listing helper
    }
 }
 #endif
+
 
 void setup() {
   Serial.begin(9600);
@@ -838,7 +956,7 @@ void setup() {
     Wire.begin();
       if (! setVolume(max9744Vol)) {
         Serial.println("Failed to set volume, MAX9744 not found!");
-        //while (1);
+        while (1);
       }
   #endif
   //------------------------------------------------------
@@ -857,11 +975,13 @@ void setup() {
     }
   #else
     #if defined (vs1053Enabled)
-      theme();
+      //theme();
+      joyceCupboard();
       prevRandNum = 2;
     #endif
   #endif
 }
+
 
 void setup1() {
   //----------- Rotary Encoder initialization ------------
@@ -874,9 +994,9 @@ void setup1() {
     FastLED.addLeds<WS2812,vuDataPin,GRB>(vuLEDs,vuNumLEDs).setCorrection( TypicalPixelString );
     for (int v = 0; v <= 10; v++) {vuLEDs[disp2leds[v].ledNum] = CHSV(0, 255, vuBright); FastLED.show(); delay(100);}
     for (int v = 0; v <= 10; v++) {vuLEDs[disp2leds[v].ledNum] = CHSV(0, 255, 0);}; delay(1000); FastLED.show(); 
-    //for (int i = 0; i < vuNumLEDs; i++) {vuLEDs[i] = CHSV(0, 255, 255); Serial.print("Lighting up VU "); Serial.println(i); FastLED.show(); delay(100);}
   #endif
 }
+
 
 void loop1() {
   EVERY_N_MILLISECONDS(3000) { 
@@ -887,15 +1007,10 @@ void loop1() {
   }
 }
 
+
 void loop() {
   EVERY_N_MILLISECONDS(100) { unsigned long currentTime = millis(); digitalWrite(LED_BUILTIN, (currentTime / 500) % 2); }
   EVERY_N_MILLISECONDS(100) { interfaces(); }
-  /*EVERY_N_MILLISECONDS(3000) { 
-    for (int v = 0; v <= 10; v++) {
-      vuLEDs[disp2leds[v].ledNum] = CHSV(0, 255, 0);
-    }
-    FastLED.show();
-  }*/
   EVERY_N_MILLISECONDS(1011) { 
     if ( dspActive == false ) { 
       inactiveTimer++;
@@ -926,8 +1041,6 @@ void loop() {
           Serial.print(" prev2RandNum: "); Serial.print(prev2RandNum);
           Serial.print(" randNum: "); Serial.println(randNum);
         #endif
-      //if ( ((randNum != 1 && randNum != 2 && randNum != 4) && (randNum == prev2RandNum))
-        //|| ((randNum == 1 || randNum == 2 || randNum == 4) && (randNum == prevRandNum || randNum == prevRandNum)) ) {
       if ( (randNum != 0) && ((randNum == prev2RandNum) || (randNum == prevRandNum))) {
         while ( (prev2RandNum == randNum) || (prevRandNum == randNum) ) { 
           randNum = random(0,eventNum); 
@@ -939,10 +1052,8 @@ void loop() {
         }
       }
       if ( randNum == 0 ) { predefined_msgs(); }
-      if ( randNum == 1 ) { joyceRun(); }
-      //if ( randNum == 2 ) { theClash(); }
+      if ( randNum == 1 ) { animations(); }
       if ( randNum == 2 ) { soundTrack(); }
-      //if ( randNum == 4 ) { theme();}
       prev2RandNum = prevRandNum; prevRandNum = randNum;
     #else
       predefined_msgs();
