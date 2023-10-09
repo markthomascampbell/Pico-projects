@@ -1,0 +1,12 @@
+Hardware list:<br>
+-[AdaFruit Feather RP2040](https://www.adafruit.com/product/4884)<br>
+-[AdaFruit FeatherWing Music Maker](https://www.adafruit.com/product/3357)<br>
+-[AdaFruit Stereo 20W Class D Audio Amplifier](https://www.adafruit.com/product/1752)<br>
+-[12V to 5V Voltage Converter](https://www.amazon.com/EPBOWPT-Converter-Regulator-Supply-Transformer/dp/B01M0323MJ/)<br>
+-[ALITOVE WS2811 12V LED Pixels 12mm 7 inch Spacing 50 LEDs](https://www.amazon.com/dp/B0BF4WBF41)<br>
+-[ALITOVE AC 110V/220V to DC 12V 30A 360W Universal Regulated Switching Power Supply](https://www.amazon.com/dp/B06XJVYDDW)<br>
+-[ALITOVE DC 12V 5A Power Supply](https://www.amazon.com/dp/B01GEA8PQA)<br>
+-[ALITOVE 3 Pin T Style Power Injection Connector](https://www.amazon.com/dp/B09KMPW1WW)<br>
+-[C9 bulb adapter for WS2811/Pixel LEDs](https://www.thingiverse.com/thing:3331268) (print as many as needed for LED Pixels above)<br>
+-[PCB strip 8x 5050 NeoPixel LEDs](https://www.amazon.com/dp/B09YTLY6CK/)<br>
+-Classic 80's style Boombox
