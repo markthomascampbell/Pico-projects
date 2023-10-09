@@ -1,4 +1,6 @@
 /*
+Collection: Arduino Pico by Earle Philhower 
+            - https://github.com/earlephilhower/arduino-pico/releases/download/global/package_rp2040_index.json
 Board:      Adafruit Feather RP2040
 Shield:     Adafruit Featherwing Music Maker
 Peripheral: Adafruit 20W stereo amplifier 
@@ -22,7 +24,7 @@ RE1CLK  24            12
 #include <Wire.h>                                       // Wire library to control MAX9744 via I2C protocol
 //#include <SPI.h>                                        // Library for SPI devices like the rotary encoder
 // ----- Configuration Options ------
-#define encoder1
+#define encoder1                                        // Enables the volume dial (rotary encoder) & VU meter
 #define verbose                                         // Enable to show more verbosity on Serial
 //#define debug                                         // Enable to show maximum verbosity on Serial
 //#define demoEnabled                                   // Enable to ensure the 1st 4 items are predictable
@@ -37,7 +39,7 @@ RE1CLK  24            12
 #endif
 // ----- Music Maker definitions -----
 #define vs1053Enabled                                   // Enable to enable sound playback through the FeatherWing Music Maker
-//#define fake_vs1053Enabled
+//#define fake_vs1053Enabled                            // 
 #if defined (vs1053Enabled)
   #define VS1053_RESET   -1                             // VS1053 reset pin (not used!)
   #define VS1053_CS       8                             // VS1053 chip select pin (output)
@@ -63,6 +65,7 @@ String AN[2] = {"/JoyceRun.mp3", "/JoyceCupboard.mp3"};
   bool turnOff = false;                                 // Future feature to pause playback
   // ----- VU Meter Light Definitions -----
   unsigned long vuTimeDelay = 0;
+  bool vuOn = false;
   const int vuNumLEDs = 17;                             // Number of LEDS on VU Meter Array
   const int vuDataPin = 28;                             // VU Meter Array Data Pin
   CRGBArray<vuNumLEDs> vuLEDs;                          // VU Meter Array Definition
@@ -110,6 +113,7 @@ String msgArray[msgArrayNum] = {"help me", "watch out",
   uint8_t ceilingLightSatFade[ceilingNumLEDs];          // Array to use as a placeholder during Fade effects
   uint8_t ceilingLightBrightFade[ceilingNumLEDs];       // Array to use as a placeholder during Fade effects
   CRGBArray<ceilingNumLEDs> ceilingLEDs;                // Ceiling LED array definition
+  const int ballOfLights = 50;                          // number of LEDs in ball of lights for Joyce Cupboard seq
 #endif
 // ----- 
 const uint8_t lightPtn[5] = { 250, 40, 20, 140, 110 };  // Light Pattern: Red, Yellow, Orange, Blue, Green
@@ -176,6 +180,7 @@ void vuDisplay() {
   }
   FastLED.show();
   vuTimeDelay = millis();
+  vuOn = true;
 }
 
 
@@ -339,7 +344,7 @@ void ballFadeIn(int fTime) {
   int div = (fTime/ bright);
   for ( int b=ballBrightMin; b <= bright; b+=5) {
     #if defined (ceilingEnabled)
-      for ( int i=(ceilingNumLEDs-50); i < (ceilingNumLEDs); i++) { ceilingLEDs[i] = CHSV(ceilingLightNumColor[i], 0, b); }
+      for ( int i=(ceilingNumLEDs-ballOfLights); i < (ceilingNumLEDs); i++) { ceilingLEDs[i] = CHSV(ceilingLightNumColor[i], 0, b); }
     #else
       for ( int i=0; i < (alphabetNumLEDs); i++) { alphabetLEDs[i] = CHSV(alphabetLightNumColor[i], 0, b); }
     #endif
@@ -353,7 +358,7 @@ void ballDim(int fTime) {
   int div = fTime / bright;
   for ( int b=bright; b >= ballBrightMin; b-=5) {
     #if defined (ceilingEnabled)
-      for ( int i=(ceilingNumLEDs-50); i < (ceilingNumLEDs); i++) { ceilingLEDs[i] = CHSV(40, 0, b); }
+      for ( int i=(ceilingNumLEDs-ballOfLights); i < (ceilingNumLEDs); i++) { ceilingLEDs[i] = CHSV(40, 0, b); }
     #else
       for ( int i=0; i < (alphabetNumLEDs); i++) { alphabetLEDs[i] = CHSV(40, 0, b); }
     #endif
@@ -366,12 +371,12 @@ void ballDim(int fTime) {
 void ballOff() {
   for ( int b=ballBrightMin; b >= 0; b--) {
     #if defined (ceilingEnabled)
-      for ( int i=(ceilingNumLEDs-50); i < (ceilingNumLEDs); i++) { ceilingLEDs[i] = CHSV(40, 0, b); }
+      for ( int i=(ceilingNumLEDs-ballOfLights); i < (ceilingNumLEDs); i++) { ceilingLEDs[i] = CHSV(40, 0, b); }
     #else
       for ( int i=0; i < (alphabetNumLEDs); i++) { alphabetLEDs[i] = CHSV(40, 0, b); }
     #endif
     FastLED.show();
-    delay(20);
+    delay(10);
   }
 }
 
@@ -676,10 +681,14 @@ void joyceCupboard() {
     musicPlayer.startPlayingFile("/JoyceCupboard.mp3");
   #endif
   clipStart = millis();
-  Serial.print("clipStart: "); Serial.println(clipStart);
+  #if defined (debug)
+    Serial.print("clipStart: "); Serial.println(clipStart);
+  #endif
   creep((ceilingNumLEDs-100), (ceilingNumLEDs-50));
   creep((ceilingNumLEDs-100), (ceilingNumLEDs-50));
-  Serial.print("millis After 1st creep:"); Serial.println(millis());
+  #if defined (debug)
+    Serial.print("millis After 1st creep:"); Serial.println(millis());
+  #endif
   while (millis() < (clipStart + 24445)) { }
   ballFadeIn(20);
   while (millis() < (clipStart + 29383)) { }
@@ -725,7 +734,7 @@ void joyceRun() {
   #if defined (fake_vs1053Enabled)
     Serial.println("waiting for fake playing to end");
   #else
-    while (!musicPlayer.stopped()) { EVERY_N_MILLISECONDS(100) { interfaces(); } };
+    while (!musicPlayer.stopped()) { /*EVERY_N_MILLISECONDS(100) { interfaces(); }*/ };
   #endif
   #if defined (verbose)
     Serial.println("joyceRun finished");
@@ -743,7 +752,7 @@ void theClash() {
     Serial.println("Fake playing Clash.mp3");
   #else
     musicPlayer.startPlayingFile("/Clash.mp3");
-    while (!musicPlayer.stopped()) { EVERY_N_MILLISECONDS(100) { interfaces(); } };
+    while (!musicPlayer.stopped()) { /*EVERY_N_MILLISECONDS(100) { interfaces(); }*/ };
   #endif
   #if defined (verbose) 
     Serial.println("theClash finished");
@@ -790,7 +799,7 @@ void theme() {
   #if defined (fake_vs1053Enabled)
     Serial.println("Waiting for fake playing to complete");
   #else
-    while (!musicPlayer.stopped()) { EVERY_N_MILLISECONDS(100) { interfaces(); } };
+    while (!musicPlayer.stopped()) { /*EVERY_N_MILLISECONDS(100) { interfaces(); }*/ };
   #endif
   #if defined (verbose) 
     Serial.println("Theme finished");
@@ -892,7 +901,7 @@ void soundTrack() {
   #if defined (fake_vs1053Enabled)
     Serial.println("Waiting for fake playback");
   #else
-    while (!musicPlayer.stopped()) { EVERY_N_MILLISECONDS(100) { interfaces(); } };
+    while (!musicPlayer.stopped()) { /*EVERY_N_MILLISECONDS(100) { interfaces(); }*/ };
   #endif
   #if defined (verbose) 
     Serial.print(ST[randST]); Serial.println(" finished");
@@ -924,7 +933,6 @@ void printDirectory(File dir, int numTabs) {    // File listing helper
 void setup() {
   Serial.begin(9600);
   delay(2000);
-  pinMode (LED_BUILTIN, OUTPUT);  // used as heartbeat indicator
   FastLED.addLeds<WS2811,alphabetDataPin,RGB>(alphabetLEDs,alphabetNumLEDs).setCorrection( TypicalPixelString ); 
   #if defined (ceilingEnabled)
     FastLED.addLeds<WS2812,ceilingDataPin,RGB>(ceilingLEDs,ceilingNumLEDs).setCorrection( TypicalPixelString ); 
@@ -975,8 +983,8 @@ void setup() {
     }
   #else
     #if defined (vs1053Enabled)
-      //theme();
-      joyceCupboard();
+      theme();
+      //joyceCupboard();
       prevRandNum = 2;
     #endif
   #endif
@@ -984,6 +992,7 @@ void setup() {
 
 
 void setup1() {
+  pinMode (LED_BUILTIN, OUTPUT);  // used as heartbeat indicator
   //----------- Rotary Encoder initialization ------------
   #if defined (encoder1)
     pinMode(RE1_CLK,INPUT_PULLUP); attachInterrupt(RE1_CLK, readEncoder, CHANGE); // Rotary Encoder 1 CLK
@@ -999,18 +1008,23 @@ void setup1() {
 
 
 void loop1() {
-  EVERY_N_MILLISECONDS(3000) { 
-    for (int v = 0; v <= 10; v++) {
-      vuLEDs[disp2leds[v].ledNum] = CHSV(0, 255, 0);
+  //EVERY_N_MILLISECONDS(100) { unsigned long currentTime = millis(); digitalWrite(LED_BUILTIN, (currentTime / 500) % 2); }
+  //EVERY_N_MILLISECONDS(100) { interfaces(); }
+  EVERY_N_MILLISECONDS(100) { 
+    if (vuOn == true) {
+      if (millis() > (vuTimeDelay + 3000)) {
+        for (int v = 0; v <= 10; v++) {
+          vuLEDs[disp2leds[v].ledNum] = CHSV(0, 255, 0);
+        }
+        FastLED.show();
+        vuOn = false;
+      }
     }
-    FastLED.show();
   }
 }
 
 
 void loop() {
-  EVERY_N_MILLISECONDS(100) { unsigned long currentTime = millis(); digitalWrite(LED_BUILTIN, (currentTime / 500) % 2); }
-  EVERY_N_MILLISECONDS(100) { interfaces(); }
   EVERY_N_MILLISECONDS(1011) { 
     if ( dspActive == false ) { 
       inactiveTimer++;
@@ -1061,5 +1075,4 @@ void loop() {
     dspActive = false;
     inactiveTimer = 0;
   }
-  FastLED.show();
 }
