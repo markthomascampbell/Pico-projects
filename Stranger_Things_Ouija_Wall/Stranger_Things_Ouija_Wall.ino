@@ -49,9 +49,9 @@ RE1CLK  24            12
   Adafruit_VS1053_FilePlayer musicPlayer =              // Defining the Music Maker command
     Adafruit_VS1053_FilePlayer(VS1053_RESET, VS1053_CS, VS1053_DCS, VS1053_DREQ, CARDCS);
 #endif
-String ST[6] = {"/KateBush.mp3", "/NeverEndingStory.mp3", 
-  "/Journey.mp3", "/MoP.mp3", "/theClash.mp3", "/theme.mp3"};
-String AN[2] = {"/JoyceRun.mp3", "/JoyceCupboard.mp3"};  
+//String ST[6] = {"/KateBush.mp3", "/NeverEndingStory.mp3", "/NeverEndingStory.mp3", "/Journey.mp3", "/MoP.mp3", "/theClash.mp3", "/theme.mp3"};
+String ST[5] = {"NeverEndingStory.mp3", "Journey.mp3", "MoP.mp3", "theClash.mp3", "theme.mp3"};
+String AN[2] = {"JoyceRun.mp3", "JoyceCupboard.mp3"};  
 // ----- Rotary Encoder definitions ------
 #if defined (encoder1)
   const uint8_t RE1_CLK = 24;                           // Rotary Encoder's CLK pin, each click in either direction, output cycles HIGH then LOW
@@ -121,7 +121,7 @@ const uint8_t eventNum = 3;                             // Range of numbers for 
 uint8_t randNum;                                        // Random Number for selecting events randomly
 uint8_t prevRandNum = eventNum + 1;                     // Placeholder for prev RandNum to reduce repeats
 uint8_t prev2RandNum = eventNum + 2;                    // Placeholder for prev RandNum to reduce repeats
-const uint8_t stNum = 6;                                // Range of numbers for randST
+const uint8_t stNum = 5;                                // Range of numbers for randST
 uint8_t prevRandST = stNum + 1;                         // Placeholder for prev randST to reduce repeats
 uint8_t prev2RandST = stNum + 2;                        // Placeholder for prev randST to reduce repeats
 uint8_t prev3RandST = stNum + 3;                        // Placeholder for prev randST to reduce repeats
@@ -154,7 +154,7 @@ void millisDelay(unsigned long d) {
   while(millis() < now + d) { now += now + d; };
 }
 
-
+#if defined (max9744Enabled)
 void vuDisplay() {
   int volDispVal = 0;
   switch (max9744Vol) {
@@ -197,7 +197,7 @@ boolean setVolume(int8_t v) {
     return false;
   #endif
 }
-
+#endif
 
 #if defined (encoder1)
 void readEncoder() { //https://lastminuteengineers.com/rotary-encoder-arduino-tutorial/amp/
@@ -260,6 +260,31 @@ void fadeIn(int fTime) {
     #endif
     FastLED.show();
     delay(div);
+  }
+}
+
+
+void fadeToBright(int fTime, int brightFade) {
+  if (brightFade < bright) {
+    for ( int b=(bright); b <= brightFade; b++) {
+      #if defined (ceilingEnabled)
+        for ( int i=0; i < (ceilingNumLEDs); i++) { ceilingLEDs[i] = CHSV(ceilingLightNumColor[i], sat, b); }
+      #else
+        for ( int i=0; i < (alphabetNumLEDs); i++) { alphabetLEDs[i] = CHSV(alphabetLightNumColor[i], sat, b); }
+      #endif
+      FastLED.show();
+      delay(fTime);
+    }
+  } else if ( brightFade > bright) {
+    for ( int b=(bright); b >= brightFade; b--) {
+      #if defined (ceilingEnabled)
+        for ( int i=0; i < (ceilingNumLEDs); i++) { ceilingLEDs[i] = CHSV(ceilingLightNumColor[i], sat, b); }
+      #else
+        for ( int i=0; i < (alphabetNumLEDs); i++) { alphabetLEDs[i] = CHSV(alphabetLightNumColor[i], sat, b); }
+      #endif
+      FastLED.show();
+      delay(fTime);
+    }
   }
 }
 
@@ -341,7 +366,6 @@ void fadeToRed() {
 
 
 void ballFadeIn(int fTime) {
-  int div = (fTime/ bright);
   for ( int b=ballBrightMin; b <= bright; b+=5) {
     #if defined (ceilingEnabled)
       for ( int i=(ceilingNumLEDs-ballOfLights); i < (ceilingNumLEDs); i++) { ceilingLEDs[i] = CHSV(ceilingLightNumColor[i], 0, b); }
@@ -349,13 +373,12 @@ void ballFadeIn(int fTime) {
       for ( int i=0; i < (alphabetNumLEDs); i++) { alphabetLEDs[i] = CHSV(alphabetLightNumColor[i], 0, b); }
     #endif
     FastLED.show();
-    delay(div);
+    delay(fTime);
   }
 }
 
 
 void ballDim(int fTime) {
-  int div = fTime / bright;
   for ( int b=bright; b >= ballBrightMin; b-=5) {
     #if defined (ceilingEnabled)
       for ( int i=(ceilingNumLEDs-ballOfLights); i < (ceilingNumLEDs); i++) { ceilingLEDs[i] = CHSV(40, 0, b); }
@@ -363,7 +386,7 @@ void ballDim(int fTime) {
       for ( int i=0; i < (alphabetNumLEDs); i++) { alphabetLEDs[i] = CHSV(40, 0, b); }
     #endif
     FastLED.show();
-    delay(div);
+    delay(fTime);
   }
 }
 
@@ -480,8 +503,17 @@ void flash() {
 
 void creep(int startLED, int endLED) {
   bool forward;
-  if (startLED <= endLED) { forward = true; } else { forward = false; }
-  if (forward = true) {
+  if (startLED < endLED) { forward = true; } 
+  else if (startLED > endLED) { forward = false; }
+  #if defined (debug)
+    Serial.print("startLED: "); Serial.println(startLED);
+    Serial.print("endLED: "); Serial.println(endLED);
+    Serial.print("forward: "); Serial.println(forward);
+  #endif
+  if (forward == true) {
+    #if defined (debug)
+      Serial.println("Creep forward");
+    #endif
     for (int i=startLED; i < endLED; i++) { 
       #if defined (ceilingEnabled)
         ceilingLEDs[i] = CHSV(ceilingLightNumColor[i], sat, bright);
@@ -497,8 +529,11 @@ void creep(int startLED, int endLED) {
       for (int i=startLED; i < endLED; i++) {alphabetLEDs[i] = CHSV(alphabetLightNumColor[i], sat, 0);}; 
     #endif
   }
-  else if (forward = false) {
-    for (uint16_t i=startLED; i > endLED; i--) { 
+  else if (forward == false) {
+    #if defined (debug)
+      Serial.println("Creep backward");
+    #endif
+    for (int i=startLED; i > endLED; i--) { 
       #if defined (ceilingEnabled)
         ceilingLEDs[i] = CHSV(ceilingLightNumColor[i], sat, bright);
       #else
@@ -512,6 +547,59 @@ void creep(int startLED, int endLED) {
     #else
       for (int i=startLED; i > endLED; i-- {alphabetLEDs[i] = CHSV(alphabetLightNumColor[i], sat, 0);}; 
     #endif
+  }
+  FastLED.show();
+}
+
+
+void zip(int startLED, int endLED, int speed) {
+  bool forward;
+  if (startLED < endLED) { forward = true; } 
+  else if (startLED > endLED) { forward = false; }
+  #if defined (debug)
+    Serial.print("startLED: "); Serial.println(startLED);
+    Serial.print("endLED: "); Serial.println(endLED);
+    Serial.print("forward: "); Serial.println(forward);
+  #endif
+  if (forward == true) {
+    //#if defined (debug)
+      Serial.println("Creep forward");
+    //#endif
+    for (int i=startLED; i < endLED; i++) { 
+      #if defined (ceilingEnabled)
+        ceilingLEDs[i] = CHSV(ceilingLightNumColor[i], sat, bright);
+      #else
+        alphabetLEDs[i] = CHSV(alphabetLightNumColor[i], sat, bright);
+      #endif
+      FastLED.show();
+      delay(speed);
+      ceilingLEDs[i] = CHSV(ceilingLightNumColor[i], sat, 0);
+    }
+    /*#if defined (ceilingEnabled)
+      for (int i=startLED; i < endLED; i++) {ceilingLEDs[i] = CHSV(ceilingLightNumColor[i], sat, 0);}; 
+    #else
+      for (int i=startLED; i < endLED; i++) {alphabetLEDs[i] = CHSV(alphabetLightNumColor[i], sat, 0);}; 
+    #endif*/
+  }
+  else if (forward == false) {
+    //#if defined (debug)
+      Serial.println("Creep backward");
+    //#endif
+    for (int i=startLED; i > endLED; i--) { 
+      #if defined (ceilingEnabled)
+        ceilingLEDs[i] = CHSV(ceilingLightNumColor[i], sat, bright);
+      #else
+        alphabetLEDs[i] = CHSV(alphabetLightNumColor[i], sat, bright);
+      #endif
+      FastLED.show();
+      delay(speed);
+      ceilingLEDs[i] = CHSV(ceilingLightNumColor[i], sat, 0);
+    }
+    /*#if defined (ceilingEnabled)
+      for (int i=startLED; i > endLED; i--) {ceilingLEDs[i] = CHSV(ceilingLightNumColor[i], sat, 0);}; 
+    #else
+      for (int i=startLED; i > endLED; i--) {alphabetLEDs[i] = CHSV(alphabetLightNumColor[i], sat, 0);}; 
+    #endif*/
   }
   FastLED.show();
 }
@@ -690,25 +778,25 @@ void joyceCupboard() {
     Serial.print("millis After 1st creep:"); Serial.println(millis());
   #endif
   while (millis() < (clipStart + 24445)) { }
-  ballFadeIn(20);
+  ballFadeIn(30);
   while (millis() < (clipStart + 29383)) { }
-  ballDim(20);
-  while (millis() < (clipStart + 38346)) { }
-  ballFadeIn(20);
+  ballDim(15);
+  while (millis() < (clipStart + 37856)) { }
+  ballFadeIn(15);
   while (millis() < (clipStart + 40884)) { }
-  ballDim(20);
+  ballDim(15);
   while (millis() < (clipStart + 51708)) { }
-  ballFadeIn(20);
+  ballFadeIn(15);
   while (millis() < (clipStart + 56337)) { }
-  ballDim(20);
+  ballDim(15);
   while (millis() < (clipStart + 61749)) { }
-  ballFadeIn(2);
+  ballFadeIn(9);
   while (millis() < (clipStart + 62742)) { }
-  ballDim(2);
+  ballDim(9);
   while (millis() < (clipStart + 63231)) { }
-  ballFadeIn(2);
+  ballFadeIn(9);
   while (millis() < (clipStart + 64301)) { }
-  ballDim(2);
+  ballDim(9);
   while (millis() < (clipStart + 94301)) { }
   ballOff();
   while (!musicPlayer.stopped()) { }
@@ -743,21 +831,47 @@ void joyceRun() {
 }
 
 
-void theClash() {
-  #if defined (verbose)
-    Serial.println("theClash");
+void animations() {
+  #if defined (verbose) 
+    Serial.println("Animations");
   #endif
-  fadeOut(1000);
+  #if defined (debug)
+    Serial.print("randAn: "); 
+  #endif
+  for (int n = 0; n < random((anNum*2),(anNum*anNum)); n++) { 
+    randAn = random(0,anNum);
+    #if defined (debug)
+      Serial.print(randAn); Serial.print(" ");
+    #endif
+  }
+  #if defined (debug)
+    Serial.println("");
+    Serial.print("prevrandAn: "); Serial.print(prevrandAn);
+    Serial.print(" randAn: "); Serial.println(randAn);
+  #endif
+  if (randAn == prevRandAn) {
+    while (randAn == prevRandAn) { 
+      randAn = random(0,anNum); 
+      #if defined (debug)
+        Serial.print("prevrandAn: "); Serial.print(prevrandAn);
+        Serial.print(" randAn: "); Serial.println(randAn);
+      #endif
+    } 
+  }
   #if defined (fake_vs1053Enabled)
-    Serial.println("Fake playing Clash.mp3");
-  #else
-    musicPlayer.startPlayingFile("/Clash.mp3");
-    while (!musicPlayer.stopped()) { /*EVERY_N_MILLISECONDS(100) { interfaces(); }*/ };
+    Serial.print("Fake ");
   #endif
   #if defined (verbose) 
-    Serial.println("theClash finished");
+    Serial.print("Playing "); Serial.println(AN[randAn]); 
   #endif
-  fadeIn(1000);
+  #if ! defined (fake_vs1053Enabled)
+    if ( randAn == 0 ) { joyceRun(); };
+    if ( randAn == 1 ) { joyceCupboard(); };
+  #endif
+  prevRandAn = randAn;
+  #if defined (verbose) 
+    Serial.print(AN[randAn]); Serial.println(" finished");
+  #endif
 }
 
 
@@ -808,47 +922,80 @@ void theme() {
 }
 
 
-void animations() {
-  #if defined (verbose) 
-    Serial.println("Animations");
-  #endif
-  #if defined (debug)
-    Serial.print("randAn: "); 
-  #endif
-  for (int n = 0; n < random((anNum*2),(anNum*anNum)); n++) { 
-    randAn = random(0,anNum);
-    #if defined (debug)
-      Serial.print(randAn); Serial.print(" ");
+void drumBeat() {
+  unsigned long beatStart = millis();
+  for ( int c=0; c <= (hbBeatBright); c+=( (hbBeatBright)/5) ) {
+    #if defined (ceilingEnabled)
+      for (int i=0; i < (ceilingNumLEDs); i++) {
+        ceilingLEDs[i] = CHSV(ceilingLightNumColor[i], sat, hbBeatBright);
+    #else
+      for (int i=0; i < (alphabetNumLEDs); i++) {
+        alphabetLEDs[i] = CHSV(alphabetLightHueFade[i], alphabetLightSatFade[i], hbBeatBright);
     #endif
+    }
   }
-  #if defined (debug)
-    Serial.println("");
-    Serial.print("prevrandAn: "); Serial.print(prevrandAn);
-    Serial.print(" randAn: "); Serial.println(randAn);
+  FastLED.show();
+  delay(100);
+  for ( int c=(hbBeatBright); c >= 0; c-=( (hbBeatBright)/5) ) {
+    #if defined (ceilingEnabled)
+      for (int i=0; i < (ceilingNumLEDs); i++) {
+        ceilingLEDs[i] = CHSV(ceilingLightNumColor[i], sat, c);
+    #else
+      for (int i=0; i < (alphabetNumLEDs); i++) {
+        alphabetLEDs[i] = CHSV(alphabetLightHueFade[i], alphabetLightSatFade[i], c);
+    #endif
+    }
+    FastLED.show();
+    delay(5);
+  }
+  delay((178 - (millis() - beatStart)));
+}
+
+
+void theClash() {
+  unsigned long songStart;
+  unsigned long beatStart;
+  unsigned long beatEnd;
+  #if defined (verbose)
+    Serial.println("theClash");
   #endif
-  if (randAn == prevRandAn) {
-    while (randAn == prevRandAn) { 
-      randAn = random(0,anNum); 
-      #if defined (debug)
-        Serial.print("prevrandAn: "); Serial.print(prevrandAn);
-        Serial.print(" randAn: "); Serial.println(randAn);
-      #endif
-    } 
-  }
+  //fadeOut(1000);
+  //creep((ceilingNumLEDs-50), (ceilingNumLEDs-100));
   #if defined (fake_vs1053Enabled)
-    Serial.print("Fake ");
+    Serial.println("Fake playing Clash.mp3");
+  #else
+    musicPlayer.startPlayingFile("/Clash.mp3");
+    /*songStart = millis();
+    fadeIn(10);
+    fadeOut(10);
+    while (millis() < (songStart + 2614)) { }
+    zip(75, 100, 5);
+    while (millis() < (songStart + 3168)) { }
+    zip(100, 75, 5);
+    while (millis() < (songStart + 3739)) { }
+    zip(75, 100, 5);
+    for (int i =0; i < 6; i++) {
+
+    }*/
+    //fadeToBright(10, 128);
+    /*while (millis() < (songStart + 10200)) { }
+    drumBeat();
+    while (millis() < (songStart + 10759)) { }
+    drumBeat();
+    while (millis() < (songStart + 11256)) { }
+    drumBeat();
+    while (millis() < (songStart + 11536)) { }
+    drumBeat();
+    while (millis() < (songStart + 11810)) { }
+    drumBeat();
+    while (millis() < (songStart + 12321)) { }
+    drumBeat();*/
+    while (!musicPlayer.stopped()) { /*EVERY_N_MILLISECONDS(100) { interfaces(); }*/ };
   #endif
   #if defined (verbose) 
-    Serial.print("Playing "); Serial.println(AN[randAn]); 
+    Serial.println("theClash finished");
   #endif
-  #if ! defined (fake_vs1053Enabled)
-    if ( randAn == 0 ) { joyceRun(); };
-    if ( randAn == 1 ) { joyceCupboard(); };
-  #endif
-  prevRandAn = randAn;
-  #if defined (verbose) 
-    Serial.print(AN[randAn]); Serial.println(" finished");
-  #endif
+  //fadeIn(1000);
 }
 
 
@@ -890,12 +1037,12 @@ void soundTrack() {
     Serial.print("Playing "); Serial.println(ST[randST]); 
   #endif
   #if ! defined (fake_vs1053Enabled)
-    if ( randST == 0 ) { musicPlayer.startPlayingFile("/KateBush.mp3"); };
-    if ( randST == 1 ) { musicPlayer.startPlayingFile("/NeverEndingStory.mp3"); };
-    if ( randST == 2 ) { musicPlayer.startPlayingFile("/Journey.mp3"); };
-    if ( randST == 3 ) { musicPlayer.startPlayingFile("/MoP.mp3"); };
-    if ( randST == 4 ) { theClash(); };
-    if ( randST == 5 ) { theme(); };
+    //if ( randST == 0 ) { musicPlayer.startPlayingFile("/KateBush.mp3"); };
+    if ( randST == 0 ) { musicPlayer.startPlayingFile("/NeverEndingStory.mp3"); };
+    if ( randST == 1 ) { musicPlayer.startPlayingFile("/Journey.mp3"); };
+    if ( randST == 2 ) { musicPlayer.startPlayingFile("/MoP.mp3"); };
+    if ( randST == 3 ) { theClash(); };
+    if ( randST == 4 ) { theme(); };
   #endif
   prev3RandST = prev2RandST; prev2RandST = prevRandST; prevRandST = randST;
   #if defined (fake_vs1053Enabled)
@@ -985,6 +1132,7 @@ void setup() {
     #if defined (vs1053Enabled)
       theme();
       //joyceCupboard();
+      //theClash();
       prevRandNum = 2;
     #endif
   #endif
@@ -1010,6 +1158,7 @@ void setup1() {
 void loop1() {
   //EVERY_N_MILLISECONDS(100) { unsigned long currentTime = millis(); digitalWrite(LED_BUILTIN, (currentTime / 500) % 2); }
   //EVERY_N_MILLISECONDS(100) { interfaces(); }
+  #if defined (encoder1)
   EVERY_N_MILLISECONDS(100) { 
     if (vuOn == true) {
       if (millis() > (vuTimeDelay + 3000)) {
@@ -1021,6 +1170,7 @@ void loop1() {
       }
     }
   }
+  #endif
 }
 
 
