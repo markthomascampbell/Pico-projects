@@ -1,4 +1,3 @@
-// 
 #include <Mouse.h>
 #include <Keyboard.h>
 #include <ESP8266WiFi.h>
@@ -23,27 +22,30 @@ int currentMinute = 0;                        // Variable for current minute
 int currentSecond = 0;                        // Variable for current second
 int currentDay = 0;                           // Variable for current day of the week
 bool wifiEnabled = false;                     // If connected to wifi, this variable will get set to enabled
-unsigned long ntpTimeRefresh = 0;             // Counter for how long since NTP Time data was last refreshed
-unsigned long jiggleFreq = 30000;             // How often you want the mouse to jiggle in ms
-unsigned long lastJiggle = 0;                 // Counter for how long since jiggle last occurred
-//unsigned long dayMins = 0;                   // Conversion for daySecs
-unsigned long daySecs = 0;                    // Counter for seconds elapsed today, easier to measure difference in time
-unsigned long dayStartSecs = ( dayStartHour * 3600 ) + ( dayStartMin * 60 ) + dayStartSec;
-unsigned long dayEndSecs = ( dayEndHour * 3600 ) + ( dayEndMin * 60 ) + dayEndSec;
+uint32_t ntpTimeRefresh = 0;                  // Counter for how long since NTP Time data was last refreshed
+uint32_t jiggleFreq = 30000;                  // How often you want the mouse to jiggle in ms
+uint32_t lastJiggle = 0;                      // Counter for how long since jiggle last occurred
+//uint32_t dayMins = 0;                        // Conversion for daySecs
+uint32_t daySecs = 0;                         // Counter for seconds elapsed today, easier to measure difference in time
+uint32_t dayStartSecs = ( dayStartHour * 3600 ) + ( dayStartMin * 60 ) + dayStartSec;
+uint32_t dayEndSecs = ( dayEndHour * 3600 ) + ( dayEndMin * 60 ) + dayEndSec;
 // ########## Choose your timezone
-  //unsigned long tzOffset = 0;               // UTC
-  //unsigned long tzOffset = -14400;          // GMT-4 - EDT
-  //unsigned long tzOffset = -18000;          // GMT-5 - CDT / EST
-  unsigned long tzOffset = -21600;            // GMT-6 - MDT / CST
-  //unsigned long tzOffset = -25200;          // GMT-7 - PDT / MST
-  //unsigned long tzOffset = -28800;          // GMT-8 - PST
-//unsigned long tzMap[] = { 0, -14400, -18000, -21600, -25200, -28800 };
-//unsigned long tz = 0;
+  //int32_t tzOffset = 0;                     // UTC
+  //long tzOffset = -14400;                   // GMT-4 - EDT
+  //long tzOffset = -18000;                   // GMT-5 - CDT / EST
+  long tzOffset = -21600;                     // GMT-6 - MDT / CST
+  //int32_t tzOffset = -25200;                // GMT-7 - PDT / MST
+  //int32_t tzOffset = -28800;                // GMT-8 - PST
+//long tzMap[] = { 0, -14400, -18000, -21600, -25200, -28800 };
+//long tz = 0;
 //char *tzName = "UTC";
 // ############## Sensitive Credentials Section #####################
-const char *ssid = "YOUR_SSID";               // Wifi Network
-const char *password = "YOUR_PASSWORD";       // Wifi Password
-const char *loginPW = "YOUR_LOGIN_PASSWORD";  // System password signs in automatically at start time or with press of BootSel
+//const char *ssid = "YOUR_SSID";               // Wifi Network
+//const char *password = "YOUR_PASSWORD";       // Wifi Password
+//const char *loginPW = "YOUR_LOGIN_PASSWORD";  // System password signs in automatically at start time or with press of BootSel
+const char *ssid = "Go Away_IoT"; //"YOUR_SSID";
+const char *password = "1 l0v3 K1mb3rly C@mpb3ll"; //"YOUR_PASSWORD";
+const char *loginPW = "Mari@ie321"; //"YOUR_LOGIN_PASSWORD";
 // ############## Sensitive Credentials Section #####################
 const char *macToString(uint8_t mac[6]) {
   static char s[20];
@@ -61,6 +63,16 @@ const char *encToString(uint8_t enc) {
 }
 WiFiUDP ntpUDP;
 NTPClient timeClient(ntpUDP, "pool.ntp.org");
+
+
+void flash(int rep, uint32_t ms) {
+  for ( int i = 1; i <= rep; i++) {
+    digitalWrite(LED_BUILTIN, HIGH);
+    delay (ms);
+    digitalWrite(LED_BUILTIN, LOW);
+    delay (ms);
+  }
+}
 
 
 void wifiScan() {
@@ -96,6 +108,7 @@ void wifiStatus() {
 
 
 void mouseJiggle() {
+  digitalWrite(LED_BUILTIN, HIGH);
   for ( int i = 1; i <= t; i++) {
     for (int x = 0; x <= d; x++) {
       Mouse.move(-s, 0);
@@ -107,19 +120,28 @@ void mouseJiggle() {
     }
   }
   lastJiggle = millis();
+  digitalWrite(LED_BUILTIN, LOW);
+}
+
+
+void mouseMoveToLeftCorner() {
+  digitalWrite(LED_BUILTIN, HIGH);
+  for ( int i = 1; i <= 100; i++) { Mouse.move(-30, -30); }
+  digitalWrite(LED_BUILTIN, LOW);
 }
 
 
 void signIn() {
-  for ( int i = 1; i <= 500; i++) { Mouse.move(-30, -30); }
-  for ( int i = 1; i <= 3; i++) {
+  digitalWrite(LED_BUILTIN, HIGH);
+  for ( int i = 1; i <= 4; i++) {
     Keyboard.press(KEY_LEFT_CTRL);
-    delay(100);
-    Keyboard.releaseAll();
     delay(200);
+    Keyboard.releaseAll();
+    delay(300);
   }
   delay(750);
   Keyboard.println(loginPW);
+  digitalWrite(LED_BUILTIN, LOW);
   }
 
 
@@ -148,11 +170,8 @@ void setup() {
   wifiScan();
   WiFi.begin(ssid, password);
   while ( (WiFi.status() != WL_CONNECTED) && (timeout < 10) ) {
-    delay(500);
-    digitalWrite(LED_BUILTIN, HIGH);
     Serial.print(".");
-    delay(500);
-    digitalWrite(LED_BUILTIN, LOW);
+    flash(1, 500);
     timeout++;
   }
   wifiStatus();
@@ -169,36 +188,29 @@ void loop() {
   if ( ( millis() >= ntpTimeRefresh + 1000 ) && ( wifiEnabled == true ) ) {
     timeUpdate();
   }
+
   if ( ( millis() >= ntpTimeRefresh + 10000 ) && ( wifiEnabled == false ) ) {
-    for ( int i = 1; i <= 3; i++) {
-      digitalWrite(LED_BUILTIN, HIGH);
-      delay (100);
-      digitalWrite(LED_BUILTIN, LOW);
-      delay (100);
-    }
+    flash(3, 100);
     ntpTimeRefresh = millis();
   }
-  if ( (BOOTSEL) || ( daySecs == dayStartSecs ) ) {
-    digitalWrite(LED_BUILTIN, HIGH);
+
+  if ( daySecs == ( dayStartSecs - 60000 ) ) {
+    mouseMoveToLeftCorner();
+  } 
+  else if ( ( daySecs == dayStartSecs ) || (BOOTSEL) ) {
+    if (BOOTSEL) { mouseMoveToLeftCorner(); delay(45000); } 
     signIn();
-  } else {
-    digitalWrite(LED_BUILTIN, LOW);
   }
+  
   if ( wifiEnabled == true ) {
     if ( ( daySecs > dayStartSecs) && ( daySecs < dayEndSecs ) && ( currentDay > 0 ) && ( currentDay < 6 ) ) {
       if (millis() >= lastJiggle + jiggleFreq) {
-        digitalWrite(LED_BUILTIN, HIGH);
         mouseJiggle();
-      } else {
-        digitalWrite(LED_BUILTIN, LOW);
       }
     }
   } else {
     if (millis() >= lastJiggle + jiggleFreq) {
-      digitalWrite(LED_BUILTIN, HIGH);
       mouseJiggle();
-    } else {
-      digitalWrite(LED_BUILTIN, LOW);
-    }
+    } 
   }
 }
