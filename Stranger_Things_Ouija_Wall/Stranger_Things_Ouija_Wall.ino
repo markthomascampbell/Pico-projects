@@ -34,7 +34,7 @@ RE1CLK  24            12
 // ----- MAX9744 20W Class D amplifier definitions -----
 #define max9744Enabled                                  // Enable to enable control of the MAX9744 20W amp
 #if defined (max9744Enabled)                            // Pins required: SDA -> SDA, SCL -> SCL, Vi2c -> 3.3V, Gnd -> Gnd
-  int8_t max9744Vol = 25;                               // Volume level of the MAX9744, 25 is default
+  int8_t max9744Vol = 38;                               // Volume level of the MAX9744, 25 is default
   #define MAX9744_I2CADDR 0x4B                          // 0x4B is the default I2C address
 #endif
 // ----- Music Maker definitions -----
@@ -93,9 +93,9 @@ struct alphabetArray {                                  // Data structure defini
   int led;
 };
 alphabetArray char2leds[] {                             // Alphabet array element definitions
-  {'A', 0},  {'B', 1},  {'C', 2},  {'D', 3},  {'E', 4},  {'F', 5}, {'G', 6},  {'H', 7},  {'I', 8},  
-  {'J', 9},  {'K', 10}, {'L', 11}, {'M', 12}, {'N', 13}, {'O', 14}, {'P', 15}, {'Q', 16}, {'R', 17},
-  {'S', 18}, {'T', 19}, {'U', 20}, {'V', 21}, {'W', 22}, {'X', 23}, {'Y', 24}, {'Z', 25},
+  {'A', 49},  {'B', 48},  {'C', 47},  {'D', 45},  {'E', 44},  {'F', 43}, {'G', 42},  {'H', 41},  
+  {'I', 27}, {'J', 29},  {'K', 30}, {'L', 32}, {'M', 33}, {'N', 34}, {'O', 35}, {'P', 36}, {'Q', 38}, 
+  {'R', 24}, {'S', 23}, {'T', 22}, {'U', 21}, {'V', 20}, {'W', 18}, {'X', 17}, {'Y', 16}, {'Z', 14},
 };
 const int msgArrayNum = 9;                              // Range of numbers for randMsg
 uint8_t prevRandMsg = msgArrayNum + 1;                  // Placeholder for prev randMsg to reduce repeats
@@ -368,7 +368,8 @@ void fadeToRed() {
 void ballFadeIn(int fTime) {
   for ( int b=ballBrightMin; b <= bright; b+=5) {
     #if defined (ceilingEnabled)
-      for ( int i=(ceilingNumLEDs-ballOfLights); i < (ceilingNumLEDs); i++) { ceilingLEDs[i] = CHSV(ceilingLightNumColor[i], 0, b); }
+      //for ( int i=(ceilingNumLEDs-ballOfLights); i < (ceilingNumLEDs); i++) { ceilingLEDs[i] = CHSV(ceilingLightNumColor[i], 0, b); }
+      for ( int i=(211); i < (ceilingNumLEDs); i++) { ceilingLEDs[i] = CHSV(ceilingLightNumColor[i], 0, b); }
     #else
       for ( int i=0; i < (alphabetNumLEDs); i++) { alphabetLEDs[i] = CHSV(alphabetLightNumColor[i], 0, b); }
     #endif
@@ -381,7 +382,8 @@ void ballFadeIn(int fTime) {
 void ballDim(int fTime) {
   for ( int b=bright; b >= ballBrightMin; b-=5) {
     #if defined (ceilingEnabled)
-      for ( int i=(ceilingNumLEDs-ballOfLights); i < (ceilingNumLEDs); i++) { ceilingLEDs[i] = CHSV(40, 0, b); }
+      //for ( int i=(ceilingNumLEDs-ballOfLights); i < (ceilingNumLEDs); i++) { ceilingLEDs[i] = CHSV(40, 0, b); }
+      for ( int i=(211); i < (ceilingNumLEDs); i++) { ceilingLEDs[i] = CHSV(40, 0, b); }
     #else
       for ( int i=0; i < (alphabetNumLEDs); i++) { alphabetLEDs[i] = CHSV(40, 0, b); }
     #endif
@@ -394,7 +396,8 @@ void ballDim(int fTime) {
 void ballOff() {
   for ( int b=ballBrightMin; b >= 0; b--) {
     #if defined (ceilingEnabled)
-      for ( int i=(ceilingNumLEDs-ballOfLights); i < (ceilingNumLEDs); i++) { ceilingLEDs[i] = CHSV(40, 0, b); }
+      //for ( int i=(ceilingNumLEDs-ballOfLights); i < (ceilingNumLEDs); i++) { ceilingLEDs[i] = CHSV(40, 0, b); }
+      for ( int i=(211); i < (ceilingNumLEDs); i++) { ceilingLEDs[i] = CHSV(40, 0, b); }
     #else
       for ( int i=0; i < (alphabetNumLEDs); i++) { alphabetLEDs[i] = CHSV(40, 0, b); }
     #endif
@@ -772,8 +775,11 @@ void joyceCupboard() {
   #if defined (debug)
     Serial.print("clipStart: "); Serial.println(clipStart);
   #endif
-  creep((ceilingNumLEDs-100), (ceilingNumLEDs-50));
-  creep((ceilingNumLEDs-100), (ceilingNumLEDs-50));
+  //creep((ceilingNumLEDs-100), (ceilingNumLEDs-50));
+  creep((183), (211));
+  creep((183), (211));
+  creep((183), (211));
+  creep((183), (211));
   #if defined (debug)
     Serial.print("millis After 1st creep:"); Serial.println(millis());
   #endif
@@ -1038,9 +1044,9 @@ void soundTrack() {
   #endif
   #if ! defined (fake_vs1053Enabled)
     //if ( randST == 0 ) { musicPlayer.startPlayingFile("/KateBush.mp3"); };
-    if ( randST == 0 ) { musicPlayer.startPlayingFile("/NeverEndingStory.mp3"); };
+    if ( randST == 2 ) { musicPlayer.startPlayingFile("/NeverEndingStory.mp3"); };
     if ( randST == 1 ) { musicPlayer.startPlayingFile("/Journey.mp3"); };
-    if ( randST == 2 ) { musicPlayer.startPlayingFile("/MoP.mp3"); };
+    if ( randST == 0 ) { musicPlayer.startPlayingFile("/MoP.mp3"); };
     if ( randST == 3 ) { theClash(); };
     if ( randST == 4 ) { theme(); };
   #endif
@@ -1130,7 +1136,10 @@ void setup() {
     }
   #else
     #if defined (vs1053Enabled)
-      theme();
+      for (int c=0; c < 36; c++) {
+        theme();
+        joyceRun();
+      }
       //joyceCupboard();
       //theClash();
       prevRandNum = 2;
